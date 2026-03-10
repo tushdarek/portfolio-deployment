@@ -16,20 +16,24 @@ pipeline {
         }
 
         stage('Deploy to Apache Server') {
-            steps {
-                sshagent(credentials: ["${SSH_CRED}"]) {
-                    sh '''
-                        echo "Cleaning old files on server..."
-                        ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${SERVER_IP} "sudo rm -rf ${WEB_DIR}/*"
+    steps {
+        sshagent(credentials: ["${SSH_CRED}"]) {
+            sh '''
+                echo "Creating Apache directory if not exists..."
+                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${SERVER_IP} "sudo mkdir -p ${WEB_DIR}"
 
-                        echo "Uploading new files to /tmp on server..."
-                        scp -r index.html css js fonts images ${REMOTE_USER}@${SERVER_IP}:/tmp/
+                echo "Cleaning old files..."
+                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${SERVER_IP} "sudo rm -rf ${WEB_DIR}/*"
 
-                        echo "Deploying files to Apache directory..."
-                        ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${SERVER_IP} "sudo cp -r /tmp/* /var/www/html/ ${WEB_DIR}/"
-                    '''
-                }
-            }
+                echo "Uploading files..."
+                scp -r * ${REMOTE_USER}@${SERVER_IP}:/tmp/
+
+                echo "Copying files to Apache directory..."
+                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${SERVER_IP} "sudo cp -r /tmp/* ${WEB_DIR}/"
+
+                echo "Restarting Apache..."
+                ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${SERVER_IP} "sudo systemctl restart apache2"
+            '''
         }
     }
 }
