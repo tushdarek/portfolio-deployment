@@ -8,25 +8,34 @@ pipeline {
         WEB_DIR = '/var/www/html'
     }
 
-   stage('Deploy to Apache Server') {
-    steps {
-        sshagent(['ubuntu']) {
-            sh '''
-                echo "Creating Apache directory if not exists..."
-                ssh -o StrictHostKeyChecking=no ubuntu@172.31.44.241 sudo mkdir -p /var/www/html
-                
-                echo "Cleaning old files..."
-                ssh -o StrictHostKeyChecking=no ubuntu@172.31.44.241 sudo rm -rf /var/www/html/*
-                
-                echo "Uploading files..."
-                scp -r README.md css fonts images index.html jenkinsfile js ubuntu@172.31.44.241:/tmp/
-                
-                echo "Deploying files..."
-                ssh -o StrictHostKeyChecking=no ubuntu@172.31.44.241 sudo cp -r /tmp/* /var/www/html/
-                
-                echo "Attempting to restart Apache (if installed)..."
-                ssh -o StrictHostKeyChecking=no ubuntu@172.31.44.241 "sudo systemctl restart apache2 || echo 'Apache not installed, skipping restart'"
-            '''
+    stages {
+        stage('Clone Repo') {
+            steps {
+                git 'https://github.com/tushdarek/portfolio-deployment.git'
+            }
+        }
+        
+        stage('Deploy to Apache Server') {
+            steps {
+                sshagent(["${SSH_CRED}"]) {
+                    sh '''
+                        echo "Creating Apache directory if not exists..."
+                        ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${SERVER_IP} sudo mkdir -p ${WEB_DIR}
+                        
+                        echo "Cleaning old files..."
+                        ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${SERVER_IP} sudo rm -rf ${WEB_DIR}/*
+                        
+                        echo "Uploading files..."
+                        scp -r README.md css fonts images index.html jenkinsfile js ${REMOTE_USER}@${SERVER_IP}:/tmp/
+                        
+                        echo "Deploying files..."
+                        ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${SERVER_IP} sudo cp -r /tmp/* ${WEB_DIR}/
+                        
+                        echo "Attempting to restart Apache (if installed)..."
+                        ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${SERVER_IP} "sudo systemctl restart apache2 || echo 'Apache not installed, skipping restart'"
+                    '''
+                }
+            }
         }
     }
 }
