@@ -11,7 +11,8 @@ pipeline {
     stages {
         stage('Clone Repo') {
             steps {
-                git 'https://github.com/tushdarek/portfolio-deployment.git'
+                // Specify the correct branch (main instead of master)
+                git branch: 'main', url: 'https://github.com/tushdarek/portfolio-deployment.git'
             }
         }
         
@@ -36,6 +37,15 @@ pipeline {
                     '''
                 }
             }
+        }
+    }
+    
+    post {
+        success {
+            echo 'Deployment completed successfully!'
+        }
+        failure {
+            echo 'Deployment failed!'
         }
     }
 }
